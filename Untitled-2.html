@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>海报与二维码</title>
+    <style>
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .merged-poster {
+            width: 100%;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .merged-poster img {
+            max-width: 100%;
+            height: auto;
+        }
+        #error-message {
+            color: red;
+            margin-top: 10px;
+            display: none;
+        }
+        #preview-canvas {
+            display: none;
+        }
+        #merged-canvas {
+            cursor: default;
+        }
+        #merged-canvas:hover {
+            cursor: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><text y='20' font-size='24'>🏎️</text></svg>") 16 16, auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="merged-poster">
+            <canvas id="merged-canvas"></canvas>
+        </div>
+        <div id="error-message"></div>
+        <canvas id="preview-canvas" style="display:none;"></canvas>
+    </div>
+
+    <script>
+        window.onload = function() {
+            const poster = new Image();
+            const qr = new Image();
+            
+            poster.src = '/hieweb/11.jpg';
+            qr.src = '/hieweb/22.jpg';
+            
+            poster.crossOrigin = 'anonymous';
+            qr.crossOrigin = 'anonymous';
+            
+            poster.onerror = function() {
+                console.error('海报图片加载失败');
+                this.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+            };
+            
+            qr.onerror = function() {
+                console.error('二维码图片加载失败');
+                this.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+            };
+            
+            Promise.all([
+                new Promise(resolve => {
+                    poster.onload = resolve;
+                }),
+                new Promise(resolve => {
+                    qr.onload = resolve;
+                })
+            ]).then(() => {
+                mergeImages(poster, qr);
+            });
+        };
+        
+        function mergeImages(poster, qr) {
+            const canvas = document.getElementById('merged-canvas');
+            const ctx = canvas.getContext('2d');
+            const errorMessage = document.getElementById('error-message');
+            
+            try {
+                canvas.width = (poster.naturalWidth || poster.width) / 2;
+                canvas.height = (poster.naturalHeight || poster.height) / 2;
+                
+                ctx.drawImage(poster, 0, 0, canvas.width, canvas.height);
+                
+                // 调整二维码位置，上移更多距离
+                const qrWidth = canvas.width * 0.15;
+                const qrHeight = qrWidth;
+                const qrX = canvas.width - qrWidth - 20;
+                const qrY = canvas.height - qrHeight - 20 - 80; // 从28px改为80px
+                
+                ctx.drawImage(qr, qrX, qrY, qrWidth, qrHeight);
+                
+                const container = document.querySelector('.merged-poster');
+                container.style.width = canvas.width + 'px';
+                container.style.maxWidth = '100%';
+                
+                errorMessage.style.display = 'none';
+            } catch(e) {
+                errorMessage.textContent = '图片合并失败：' + (e.message || '未知错误');
+                errorMessage.style.display = 'block';
+                console.error('合并失败：', e);
+            }
+        }
+    </script>
+</body>
+</html>
